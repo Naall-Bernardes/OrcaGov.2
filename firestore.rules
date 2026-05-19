@@ -8,11 +8,11 @@ service cloud.firestore {
 
     // Common Helpers
     function isSignedIn() {
-      return request.auth != null;
+      return true; // Bypass per user request to remove login
     }
     
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return true; // Bypass per user request to remove login
     }
 
     function isValidId(id) {
@@ -22,7 +22,6 @@ service cloud.firestore {
     // Budget Validation
     function isValidBudget(data) {
       return data.keys().hasAll(['userId', 'name', 'sre', 'municipality', 'school', 'createdAt'])
-        && data.userId == request.auth.uid
         && data.name is string && data.name.size() > 0
         && data.sre is string
         && data.municipality is string
@@ -30,20 +29,15 @@ service cloud.firestore {
     }
 
     match /budgets/{budgetId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if true;
       
-      allow create: if isSignedIn() 
-        && isValidBudget(request.resource.data)
-        && request.resource.data.createdAt == request.time;
+      allow create: if isValidBudget(request.resource.data);
 
-      allow update: if isSignedIn()
-        && resource.data.userId == request.auth.uid
-        && isValidBudget(request.resource.data)
+      allow update: if isValidBudget(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt
         && (request.resource.data.updatedAt == request.time || !request.resource.data.keys().contains('updatedAt'));
 
-      allow delete: if isSignedIn() 
-        && resource.data.userId == request.auth.uid;
+      allow delete: if true;
     }
   }
 }

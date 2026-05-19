@@ -74,8 +74,7 @@ export default function BudgetList({ onSelectBudget }: BudgetListProps) {
     if (!user) return;
 
     const q = query(
-      collection(db, 'budgets'),
-      where('userId', '==', user.uid)
+      collection(db, 'budgets')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

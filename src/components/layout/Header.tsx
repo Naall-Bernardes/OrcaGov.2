@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Bell, User, LogOut } from 'lucide-react';
+import { Bell, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Header() {
@@ -28,16 +28,9 @@ export default function Header() {
             <img src={user.photoURL} className="h-8 w-8 rounded-sm object-cover border border-mg-red/20" alt="Avatar" referrerPolicy="no-referrer" />
           ) : (
             <div className="h-8 w-8 rounded-sm bg-mg-red flex items-center justify-center text-white font-bold text-xs uppercase">
-              {user?.displayName?.substring(0, 2) || (user?.email?.substring(0, 2))}
+               USU
             </div>
           )}
-          <button 
-            onClick={logout}
-            title="Sair"
-            className="ml-2 p-1.5 text-gray-400 hover:text-mg-red hover:bg-mg-red/5 rounded transition-all"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
         </div>
       </div>
     </header>

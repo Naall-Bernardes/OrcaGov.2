@@ -14,10 +14,9 @@ import SuppliesManager from '@/src/components/budget/SuppliesManager';
 import Reports from '@/src/components/budget/Reports';
 import SyncAnalysis from '@/src/components/budget/SyncAnalysis';
 import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
-import LoginPage from '@/src/components/auth/LoginPage';
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null);
 
@@ -30,10 +29,6 @@ function AppContent() {
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return <LoginPage />;
   }
 
   const handleSelectBudget = (id: string) => {

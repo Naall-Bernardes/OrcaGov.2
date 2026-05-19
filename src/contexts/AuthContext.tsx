@@ -7,8 +7,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { 
   User, 
   onAuthStateChanged, 
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
+  signInAnonymously,
   signOut 
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -16,43 +15,24 @@ import { auth } from '../lib/firebase';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, pass: string) => Promise<void>;
-  signUp: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>({
+    uid: 'public-user',
+    email: 'gestor@minas.gov.br',
+    displayName: 'Gestor Orçamentário',
+    isAnonymous: false,
+  } as any);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    // No-op: Auth is disabled as per user request
+    setLoading(false);
   }, []);
-
-  const signIn = async (email: string, pass: string) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-    } catch (error) {
-      console.error('Error signing in:', error);
-      throw error;
-    }
-  };
-
-  const signUp = async (email: string, pass: string) => {
-    try {
-      await createUserWithEmailAndPassword(auth, email, pass);
-    } catch (error) {
-      console.error('Error signing up:', error);
-      throw error;
-    }
-  };
 
   const logout = async () => {
     try {
@@ -63,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, logout }}>
+    <AuthContext.Provider value={{ user, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );
