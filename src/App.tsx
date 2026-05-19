@@ -12,6 +12,7 @@ import BudgetDetail from '@/src/components/budget/BudgetDetail';
 import CompositionsManager from '@/src/components/budget/CompositionsManager';
 import SuppliesManager from '@/src/components/budget/SuppliesManager';
 import Reports from '@/src/components/budget/Reports';
+import SyncAnalysis from '@/src/components/budget/SyncAnalysis';
 import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
 import LoginPage from '@/src/components/auth/LoginPage';
 
@@ -67,8 +68,15 @@ function AppContent() {
           {activeTab === 'compositions' && <CompositionsManager />}
           {activeTab === 'insumos' && <SuppliesManager />}
           {activeTab === 'relatorios' && <Reports />}
+          {activeTab === 'analises' && <SyncAnalysis />}
           
-          {activeTab !== 'dashboard' && activeTab !== 'budgets' && activeTab !== 'budget-detail' && activeTab !== 'compositions' && activeTab !== 'insumos' && activeTab !== 'relatorios' && (
+          {activeTab !== 'dashboard' && 
+           activeTab !== 'budgets' && 
+           activeTab !== 'budget-detail' && 
+           activeTab !== 'compositions' && 
+           activeTab !== 'insumos' && 
+           activeTab !== 'relatorios' && 
+           activeTab !== 'analises' && (
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
                <div className="text-xl font-medium">Módulo em Desenvolvimento</div>
                <p className="mt-2 text-sm italic">Esta funcionalidade estará disponível em breve.</p>

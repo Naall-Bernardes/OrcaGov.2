@@ -10,7 +10,8 @@ import {
   FileEdit,
   Plus,
   X,
-  Search
+  Search,
+  Pencil
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -61,6 +62,7 @@ export default function BudgetList({ onSelectBudget }: BudgetListProps) {
     templateId: ''
   });
 
+  const [loading, setLoading] = useState(true);
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -77,14 +79,39 @@ export default function BudgetList({ onSelectBudget }: BudgetListProps) {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const budgetsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        date: doc.data().date || doc.data().createdAt?.toDate()?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
-      })) as Budget[];
+      const budgetsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt;
+        let dateStr = data.date;
+        
+        if (!dateStr && createdAt) {
+          try {
+            dateStr = typeof createdAt.toDate === 'function' 
+              ? createdAt.toDate().toISOString().split('T')[0] 
+              : (typeof createdAt === 'string' ? createdAt : new Date().toISOString().split('T')[0]);
+          } catch (e) {
+            dateStr = new Date().toISOString().split('T')[0];
+          }
+        }
+
+        return {
+          id: doc.id,
+          ...data,
+          name: data.name || 'SEM NOME',
+          date: dateStr || new Date().toISOString().split('T')[0],
+          sre: data.sre || '',
+          municipality: data.municipality || '',
+          school: data.school || '',
+          schoolAddress: data.schoolAddress || '',
+          totalValue: data.totalValue || 0,
+          status: data.status || 'A Iniciar'
+        };
+      }) as Budget[];
       setBudgets(budgetsData);
+      setLoading(false);
     }, (error) => {
       console.error('Firestore Error:', error);
+      setLoading(false);
     });
 
     const handleClickOutside = () => setActiveDropdownId(null);
@@ -207,9 +234,9 @@ export default function BudgetList({ onSelectBudget }: BudgetListProps) {
 
   const filteredBudgets = budgets.filter(budget => {
     return (
-      budget.sre.toLowerCase().includes(filterSre.toLowerCase()) &&
-      budget.municipality.toLowerCase().includes(filterMunicipality.toLowerCase()) &&
-      budget.school.toLowerCase().includes(filterSchool.toLowerCase())
+      (budget.sre || "").toLowerCase().includes(filterSre.toLowerCase()) &&
+      (budget.municipality || "").toLowerCase().includes(filterMunicipality.toLowerCase()) &&
+      (budget.school || "").toLowerCase().includes(filterSchool.toLowerCase())
     );
   });
 
@@ -275,7 +302,28 @@ export default function BudgetList({ onSelectBudget }: BudgetListProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filteredBudgets.map((budget, i) => (
+            {loading ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-20 text-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 border-2 border-mg-red border-t-transparent rounded-full animate-spin"></div>
+                    <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Carregando Orçamentos...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : filteredBudgets.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-20 text-center">
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-tight">Nenhum orçamento encontrado.</p>
+                  <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="mt-4 text-mg-red font-black text-[10px] uppercase tracking-widest hover:underline"
+                  >
+                    + Criar Primeiro Orçamento
+                  </button>
+                </td>
+              </tr>
+            ) : filteredBudgets.map((budget, i) => (
               <motion.tr 
                 key={budget.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -331,7 +379,7 @@ export default function BudgetList({ onSelectBudget }: BudgetListProps) {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-1">
+                  <div className="flex items-center justify-end gap-2">
                     {deletingId === budget.id ? (
                       <div className="flex items-center gap-1 bg-mg-red text-white rounded px-2 py-1 animate-in slide-in-from-right-4">
                         <span className="text-[8px] font-black uppercase tracking-widest mr-1">Excluir?</span>
@@ -351,15 +399,27 @@ export default function BudgetList({ onSelectBudget }: BudgetListProps) {
                     ) : (
                       <>
                         <button 
-                          title="Editar Metadados"
+                          id={`open-budget-${budget.id}`}
+                          title="Abrir Orçamento"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectBudget(budget.id);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-mg-blue/10 text-mg-blue hover:bg-mg-blue hover:text-white rounded transition-all font-black text-[9px] uppercase tracking-widest border border-mg-blue/20"
+                        >
+                          <FileEdit className="h-3.5 w-3.5" />
+                          <span>Abrir</span>
+                        </button>
+                        <button 
+                          title="Configurações (Metadados)"
                           onClick={(e) => { 
                             e.stopPropagation(); 
                             setEditingBudget(budget);
                             setIsEditModalOpen(true);
                           }}
-                          className="p-2 text-gray-400 hover:text-mg-blue hover:bg-mg-blue/5 rounded transition-all"
+                          className="p-2 text-gray-400 hover:text-mg-black hover:bg-gray-100 rounded transition-all"
                         >
-                          <FileEdit className="h-4 w-4 pointer-events-none" />
+                          <Pencil className="h-4 w-4 pointer-events-none" />
                         </button>
                         <button 
                           title="Excluir Orçamento"

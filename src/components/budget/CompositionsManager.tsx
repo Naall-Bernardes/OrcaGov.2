@@ -29,6 +29,7 @@ interface Composition {
   unit: string;
   value: number;
   database: string;
+  coefficient?: number;
   children?: Composition[];
 }
 
@@ -41,9 +42,9 @@ const MOCK_COMPOSITIONS: Composition[] = [
     value: 380.50,
     database: 'SINAPI',
     children: [
-      { id: '1.1', code: '88309', description: 'Pedreiro com encargos complementares', unit: 'h', value: 25.30, database: 'SINAPI' },
-      { id: '1.2', code: '88316', description: 'Servente com encargos complementares', unit: 'h', value: 18.90, database: 'SINAPI' },
-      { id: '1.3', code: '11145', description: 'Concreto usinado', unit: 'm3', value: 336.30, database: 'SINAPI' },
+      { id: '1.1', code: '88309', description: 'Pedreiro com encargos complementares', unit: 'h', value: 25.30, database: 'SINAPI', coefficient: 0.8 },
+      { id: '1.2', code: '88316', description: 'Servente com encargos complementares', unit: 'h', value: 18.90, database: 'SINAPI', coefficient: 1.2 },
+      { id: '1.3', code: '11145', description: 'Concreto usinado', unit: 'm3', value: 336.30, database: 'SINAPI', coefficient: 1.05 },
     ]
   },
   {
@@ -54,8 +55,8 @@ const MOCK_COMPOSITIONS: Composition[] = [
     value: 85.20,
     database: 'SINAPI',
     children: [
-      { id: '2.1', code: '88 کارگر', description: 'Carpinteiro', unit: 'h', value: 25.30, database: 'SINAPI' },
-      { id: '2.2', code: '616', description: 'Madeira compensada', unit: 'm2', value: 35.00, database: 'SINAPI' },
+      { id: '2.1', code: '88309', description: 'Carpinteiro', unit: 'h', value: 25.30, database: 'SINAPI', coefficient: 2.5 },
+      { id: '2.2', code: '616', description: 'Madeira compensada', unit: 'm2', value: 35.00, database: 'SINAPI', coefficient: 1.1 },
     ]
   }
 ];
@@ -111,6 +112,12 @@ export default function CompositionsManager() {
           </div>
 
           <div className="flex items-center gap-12">
+            <div className="text-right">
+              <p className="text-[9px] font-black text-mg-blue uppercase tracking-widest">Índice</p>
+              <p className="text-xs font-black text-mg-blue italic">
+                {(comp.coefficient || 1).toLocaleString('pt-BR', { minimumFractionDigits: 4 })}
+              </p>
+            </div>
             <div className="text-right hidden sm:block">
               <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Unidade</p>
               <p className="text-xs font-bold text-mg-black italic">{comp.unit}</p>

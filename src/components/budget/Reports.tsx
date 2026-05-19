@@ -91,12 +91,12 @@ export default function Reports() {
       const items: ABCEntry[] = [];
       const flatten = (nodes: any[]) => {
         nodes.forEach(node => {
-          if (node.type === 'ITEM') {
+          if (node.type === 'COMPOSICAO' || node.type === 'INSUMO') {
             items.push({
               code: node.code,
               description: node.description,
               value: node.totalValue || 0,
-              type: 'SERVICO' // Simplified for ABC visualization
+              type: node.type === 'INSUMO' ? 'MATERIAL' : 'SERVICO'
             });
           }
           if (node.children) flatten(node.children);
@@ -147,7 +147,7 @@ export default function Reports() {
               className="w-full px-4 py-2 bg-white border border-gray-200 rounded font-bold text-sm focus:ring-2 focus:ring-mg-red/20 focus:border-mg-red outline-none transition-all"
             >
               {budgets.map(b => (
-                <option key={b.id} value={b.id}>{b.name.toUpperCase()} ({b.school})</option>
+                <option key={b.id} value={b.id}>{(b.name || 'SEM NOME').toUpperCase()} ({b.school || ''})</option>
               ))}
             </select>
           </div>

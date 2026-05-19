@@ -25,7 +25,7 @@ export default function Header() {
             <p className="text-[10px] text-gray-500 leading-none mt-1 uppercase font-bold">{user?.email}</p>
           </div>
           {user?.photoURL ? (
-            <img src={user.photoURL} className="h-8 w-8 rounded-sm object-cover border border-mg-red/20" alt="Avatar" referrerpolicy="no-referrer" />
+            <img src={user.photoURL} className="h-8 w-8 rounded-sm object-cover border border-mg-red/20" alt="Avatar" referrerPolicy="no-referrer" />
           ) : (
             <div className="h-8 w-8 rounded-sm bg-mg-red flex items-center justify-center text-white font-bold text-xs uppercase">
               {user?.displayName?.substring(0, 2) || (user?.email?.substring(0, 2))}

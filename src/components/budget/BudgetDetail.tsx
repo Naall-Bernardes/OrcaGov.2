@@ -143,10 +143,13 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
   useEffect(() => {
     if (!budgetId || !user) return;
 
-    const unsubscribe = onSnapshot(doc(db, 'budgets', budgetId), (docSnap) => {
+    setLoading(true);
+    const budgetRef = doc(db, 'budgets', budgetId);
+    
+    const unsubscribe = onSnapshot(budgetRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setBudgetTitle(data.name || '');
+        setBudgetTitle(data.name || 'ORÇAMENTO SEM TITULO');
         
         // If data is empty or EAP is missing, initialize with a root node
         const remoteEap = data.eap || [];
@@ -163,7 +166,7 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
           setEapData([rootNode]);
           setExpanded(['A']);
         } else {
-          setEapData(remoteEap);
+          setEapData(Array.isArray(remoteEap) ? remoteEap : []);
         }
 
         if (data.bdi) {
@@ -176,10 +179,14 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
         if (data.versions) {
           setVersions(data.versions);
         }
+      } else {
+        console.warn(`Budget with ID ${budgetId} not found in Firestore.`);
+        setBudgetTitle('ORÇAMENTO NÃO ENCONTRADO');
+        setEapData([]);
       }
       setLoading(false);
     }, (error) => {
-      console.error('Firestore Error:', error);
+      console.error('Firestore onSnapshot Error:', error);
       setLoading(false);
     });
 
@@ -222,6 +229,20 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
 
   const currentBDI = calculateBDI();
 
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'ETAPA' | 'COMPOSICAO' | 'INSUMO' | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    description: '',
+    level: 1,
+    database: 'sinapi',
+    selectedItem: '',
+    quantity: 1,
+    parentId: 'A'
+  });
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-mg-gray">
@@ -244,20 +265,6 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
 
   const totalDirectCost = eapData[0]?.totalValue || 0;
   const totalWithBDI = totalDirectCost * (1 + currentBDI / 100);
-
-  // Modal States
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'ETAPA' | 'COMPOSICAO' | 'INSUMO' | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    description: '',
-    level: 1,
-    database: 'sinapi',
-    selectedItem: '',
-    quantity: 1,
-    parentId: 'A'
-  });
 
   const findNodeById = (nodes: EAPNode[], id: string): EAPNode | null => {
     for (const node of nodes) {
@@ -366,8 +373,8 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
     e.preventDefault();
     
     if (isEditing && editingNodeId) {
-      const db = MOCK_DATABASES[formData.database as keyof typeof MOCK_DATABASES];
-      const item = db.find(i => i.code === formData.selectedItem);
+      const dbMock = MOCK_DATABASES[formData.database as keyof typeof MOCK_DATABASES];
+      const item = dbMock.find(i => i.code === formData.selectedItem);
       
       const updates: Partial<EAPNode> = {
         description: formData.description,
@@ -411,8 +418,8 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
     };
 
     if (modalType === 'COMPOSICAO' || modalType === 'INSUMO') {
-      const db = MOCK_DATABASES[formData.database as keyof typeof MOCK_DATABASES];
-      const item = db.find(i => i.code === formData.selectedItem);
+      const dbMock = MOCK_DATABASES[formData.database as keyof typeof MOCK_DATABASES];
+      const item = dbMock.find(i => i.code === formData.selectedItem);
       if (item) {
         newNode.unit = item.unit;
         newNode.unitValue = item.value;
@@ -441,22 +448,23 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
     setIsEditing(true);
     setEditingNodeId(node.id);
     
-    let db = 'sinapi';
+    let dbName = 'sinapi';
     let selectedItem = '';
     
     const dbPrefixes = ['SINAPI', 'SETOP', 'SEINFRA', 'SICRO'];
-    const prefix = dbPrefixes.find(p => node.description.startsWith(p));
+    const nodeDesc = node.description || '';
+    const prefix = dbPrefixes.find(p => nodeDesc.startsWith(p));
     
     if (prefix) {
-      db = prefix.toLowerCase();
-      const afterPrefix = node.description.substring(prefix.length + 1);
+      dbName = prefix.toLowerCase();
+      const afterPrefix = nodeDesc.substring(prefix.length + 1);
       selectedItem = afterPrefix.split(' ')[0];
     }
 
     setFormData({
-      description: node.description,
+      description: nodeDesc,
       level: node.level,
-      database: db,
+      database: dbName,
       selectedItem: selectedItem,
       quantity: node.quantity || 1,
       parentId: ''
@@ -529,12 +537,12 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
           </div>
           <div className="flex-1 relative">
             <div className="flex items-center gap-2">
-              {node.description.startsWith('SINAPI') || node.description.startsWith('SETOP') || node.description.startsWith('SEINFRA') || node.description.startsWith('SICRO') ? (
+              {node.description && (node.description.startsWith('SINAPI') || node.description.startsWith('SETOP') || node.description.startsWith('SEINFRA') || node.description.startsWith('SICRO')) ? (
                  <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-black uppercase">
                    {node.description.split('-')[0]}
                  </span>
               ) : null}
-              <span className="text-xs truncate">{node.description}</span>
+              <span className="text-xs truncate">{node.description || 'Sem Descrição'}</span>
             </div>
             
             <AnimatePresence>
@@ -543,36 +551,36 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute left-0 -bottom-8 flex items-center gap-0.5 z-50 shadow-xl"
+                  className="absolute left-0 top-full mt-1 flex items-center gap-0.5 z-50 shadow-xl"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button 
                     onClick={(e) => handleOpenAddChild(node.id, 'ETAPA', e)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4299E1] text-white text-[9px] font-black uppercase rounded-l hover:bg-blue-600 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4299E1] text-white text-[9px] font-black uppercase rounded-l hover:bg-blue-600 shadow-lg transition-colors border border-white/20"
                   >
                     <Menu className="h-3 w-3" /> Etapa
                   </button>
                   <button 
                     onClick={(e) => handleOpenAddChild(node.id, 'COMPOSICAO', e)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#38A169] text-white text-[9px] font-black uppercase hover:bg-green-600 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#38A169] text-white text-[9px] font-black uppercase hover:bg-green-600 shadow-lg transition-colors border border-white/20"
                   >
                     <Grid3X3 className="h-3 w-3" /> Composição
                   </button>
                   <button 
                     onClick={(e) => handleOpenAddChild(node.id, 'INSUMO', e)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ED8936] text-white text-[9px] font-black uppercase hover:bg-orange-600 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ED8936] text-white text-[9px] font-black uppercase hover:bg-orange-600 shadow-lg transition-colors border border-white/20"
                   >
                     <Package className="h-3 w-3" /> Insumo
                   </button>
                   <button 
                     onClick={(e) => handleOpenEdit(node, e)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-600 text-white text-[9px] font-black uppercase hover:bg-gray-700 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-600 text-white text-[9px] font-black uppercase hover:bg-gray-700 shadow-lg transition-colors border border-white/20"
                   >
                     <Pencil className="h-3 w-3" /> Editar
                   </button>
                   <button 
                     onClick={(e) => handleDelete(node.id, e)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C53030] text-white text-[9px] font-black uppercase rounded-r hover:bg-red-700 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C53030] text-white text-[9px] font-black uppercase rounded-r hover:bg-red-700 shadow-lg transition-colors border border-white/20"
                   >
                     <Trash2 className="h-3 w-3" /> Excluir
                   </button>
@@ -581,7 +589,10 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
             </AnimatePresence>
           </div>
           <div className="w-20 text-center text-xs font-bold text-gray-400">{node.unit || '--'}</div>
-          <div className="w-28 text-right text-xs font-bold text-mg-black">{node.quantity?.toLocaleString('pt-BR') || '--'}</div>
+          <div className="w-28 text-right text-xs font-bold text-mg-black">
+            {level > 0 && <span className="text-[9px] text-mg-blue block leading-none mb-1">ÍNDICE:</span>}
+            {node.quantity?.toLocaleString('pt-BR', { minimumFractionDigits: level > 0 ? 4 : 2 }) || '--'}
+          </div>
           <div className="w-32 text-right text-xs font-bold text-gray-500">
             {node.unitValue ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: BRL }).format(node.unitValue) : '--'}
           </div>
@@ -591,14 +602,14 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
         </div>
         
         <AnimatePresence>
-          {isExpanded && hasChildren && (
+          {isExpanded && hasChildren && node.children && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden bg-white"
             >
-              {node.children!.map(child => renderNode(child, level + 1))}
+              {node.children.map(child => renderNode(child, level + 1))}
             </motion.div>
           )}
         </AnimatePresence>
@@ -695,7 +706,7 @@ export default function BudgetDetail({ budgetId, onBack }: { budgetId: string | 
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto bg-white m-8 border border-gray-200 shadow-sm border-t-4 border-mg-blue">
+      <div className="flex-1 overflow-auto bg-white m-8 border border-gray-200 shadow-sm border-t-4 border-mg-blue pb-32">
         <div className="min-w-[1000px]">
           <div className="flex items-center gap-2 py-4 px-6 bg-mg-black text-white text-[10px] font-black uppercase tracking-[0.2em] sticky top-0 z-30">
             <div className="w-[120px] shrink-0">ITEM</div>
