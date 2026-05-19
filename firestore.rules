@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Helpers
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Budget Validation
+    function isValidBudget(data) {
+      return data.keys().hasAll(['userId', 'name', 'sre', 'municipality', 'school', 'createdAt'])
+        && data.userId == request.auth.uid
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.sre is string && data.sre.size() <= 100
+        && data.municipality is string && data.municipality.size() <= 100
+        && data.school is string && data.school.size() <= 200
+        && (data.createdAt == request.time || data.createdAt is string) // Allowing string for initial migration if needed, but request.time for new
+        && (!data.keys().contains('updatedAt') || data.updatedAt == request.time);
+    }
+
+    match /budgets/{budgetId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && isValidId(budgetId)
+        && isValidBudget(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && isValidBudget(request.resource.data)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if isSignedIn() 
+        && resource.data.userId == request.auth.uid;
+    }
+  }
+}

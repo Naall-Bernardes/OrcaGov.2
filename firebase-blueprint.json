@@ -1,0 +1,32 @@
+{
+  "entities": {
+    "Budget": {
+      "title": "Budget",
+      "description": "Orçamento de obra pública",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "sre": { "type": "string" },
+        "municipality": { "type": "string" },
+        "school": { "type": "string" },
+        "schoolAddress": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string" },
+        "totalValue": { "type": "number" },
+        "eap": { "type": "array" },
+        "bdi": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "sre", "municipality", "school", "createdAt"]
+    }
+  },
+  "firestore": {
+    "budgets/{budgetId}": {
+      "schema": "Budget",
+      "description": "Coleção de orçamentos"
+    }
+  }
+}
